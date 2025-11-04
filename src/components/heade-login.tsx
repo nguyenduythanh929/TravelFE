@@ -1,0 +1,36 @@
+// import { ModeToggle } from "@/components/toggle-theme";
+import NavBarHeader from "@/components/navigation_menu_header";
+import Image from "next/image";
+import Link from "next/link";
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+export default function HeaderLogin() {
+  return (
+    <div className=" flex justify-center  pt-[20px] pb-[20px]  bg-white  shadow-md">
+      <div className=" flex items-center justify-between xl:w-[1280px]">
+        {/* dang ki dang nhap */}
+        <div>
+          <Image src={"/logo.png"} alt="Logo" width={200} height={200} />
+        </div>
+        <div className="flex gap-2 mr-4 ml-auto items-center">
+          <NavBarHeader />
+          <Link href={"/"}>
+            <Image
+              src={"/icon-cart.svg"}
+              alt="logo-cart"
+              width={24}
+              height={24}
+            />
+          </Link>
+          <Link href={"/"} className="ml-8">
+            <Avatar className="border-3 w-{24px} h-{24px}">
+              <AvatarImage src="" />
+              <AvatarFallback>PV</AvatarFallback>
+            </Avatar>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
