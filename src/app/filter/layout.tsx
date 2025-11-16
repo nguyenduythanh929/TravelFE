@@ -28,23 +28,6 @@ export default function TourDetailLayout({
           fill // tự động chiếm toàn bộ container
           className="object-cover"
         />
-        <Breadcrumb className="absolute flex bottom-5 left-0 right-0 m-auto z-10 xl:w-[1280px] ">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink className="text-lg text-white" href="/">
-                Trang chủ
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-
-            <BreadcrumbSeparator className="text-white " />
-
-            <BreadcrumbItem>
-              <BreadcrumbLink className="text-lg text-white" href={pivotfilter}>
-                {pivotfilter}
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
 
         <div className="absolute inset-0 bg-gradient-to-t from-blue-800/90 via-blue-400/60 to-transparent"></div>
       </div>

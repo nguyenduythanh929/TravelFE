@@ -6,6 +6,13 @@ import Headers from "@/components/header";
 import InforHeader from "@/components/home-component/infor-header";
 import Link from "next/link";
 import Footer from "@/components/footer";
+import { Toaster } from "sonner";
+import AppProvider from "@/app/AppProvider";
+import { cookies } from "next/headers";
+import { se } from "date-fns/locale";
+import HeaderLogin from "@/components/heade-login";
+import ChatBotWidget from "@/components/chatbotai/chatbotcompoent";
+import { headers } from "next/headers";
 // import { usePathname } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -18,13 +25,17 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   // const pathname = usePathname();
   // const hideHeader = pathname === "/login" || pathname === "/register";
+
+  const cookieStore: any = await cookies();
+  const sessionToken = cookieStore.get("sessionToken");
+
   return (
     <html lang="vi" suppressHydrationWarning>
       <body
@@ -37,9 +48,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <Toaster />
           <InforHeader />
-          <Headers />
-          {children}
+          {sessionToken?.value ? <HeaderLogin /> : <Headers />}
+
+          <AppProvider inittialValue={sessionToken?.value}>
+            {children}
+          </AppProvider>
+          <ChatBotWidget />
           <Footer />
         </ThemeProvider>
       </body>

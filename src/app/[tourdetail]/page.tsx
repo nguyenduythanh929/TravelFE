@@ -2,7 +2,7 @@
 import TourCardSumary from "@/app/tourdetail/[places]/[idtour]/sumarytourdetail";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getTourDetail } from "../../../../app/api/tours/route";
+import { getTourDetail } from "../../app/api/tours/route";
 import TourPage from "@/app/tourdetail/[places]/[idtour]/infortour";
 
 type TourType = {

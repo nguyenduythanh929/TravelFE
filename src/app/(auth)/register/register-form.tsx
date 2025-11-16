@@ -3,11 +3,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useRouter } from "next/navigation";
 
 const formRegister = z.object({
-  username: z.string().min(2),
+  name: z.string().min(2),
   password: z.string().min(6),
-  confirmPassword: z.string().min(6),
+  email: z.string().email("Invalid email address"),
 });
 type FormValue = z.infer<typeof formRegister>;
 import { Button } from "@/components/ui/button";
@@ -21,19 +22,83 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 export default function RegisterForm() {
+  const router = useRouter();
   const form = useForm<FormValue>({
     resolver: zodResolver(formRegister),
     defaultValues: {
-      username: "",
+      name: "",
       password: "",
-      confirmPassword: "",
+      email: "",
     },
   });
-  function onsubmit(data: FormValue) {
-    // fetch()
+  async function onsubmit(data: FormValue) {
+    try {
+      const res = await fetch(`http://localhost:8088/api/users/register`, {
+        body: JSON.stringify(data),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      // .then(async (res) => {
+      //   const payload = await res.json();
+      //   console.log("Register Response:", payload);
+      //   const data = {
+      //     status: res.status,
+      //     payload,
+      //   };
+      //   if (!res.ok) {
+      //     throw data;
+      //   }
+      // });
+
+      const payload = await res.json();
+      console.log("Register Response:", payload);
+
+      // 2️⃣ Kiểm tra kết quả đăng ký
+      if (!res.ok) {
+        throw new Error(`Register failed: ${res.status}`);
+      }
+
+      // 3️⃣ Lấy userId từ payload
+      const userId = payload?.id || payload?.userId;
+      if (!userId) {
+        throw new Error("Không tìm thấy userId trong payload đăng ký");
+      }
+
+      // 4️⃣ Tạo dữ liệu booking
+      const bookingData = {
+        userId: userId,
+        customerName: data.name,
+        paymentStatus: 0,
+        note: "Note",
+        status: 0,
+      };
+      const bookingRes = await fetch("http://localhost:8088/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(bookingData),
+      });
+
+      const bookingPayload = await bookingRes.json();
+      console.log("Booking Response:", bookingPayload);
+
+      if (!bookingRes.ok) {
+        throw new Error(`Booking failed: ${bookingRes.status}`);
+      }
+
+      router.push("/login");
+    } catch (error: any) {
+      console.log(error);
+      toast.error("Đăng kí thất bại");
+    }
   }
+
   return (
     <div className="w-full flex justify-center items-center">
       <Form {...form}>
@@ -43,7 +108,7 @@ export default function RegisterForm() {
         >
           <FormField
             control={form.control}
-            name="username"
+            name="name"
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-white">Username</FormLabel>
@@ -88,13 +153,13 @@ export default function RegisterForm() {
           />
           <FormField
             control={form.control}
-            name="password"
+            name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-white">ConfirmPassword</FormLabel>
+                <FormLabel className="text-white">Email</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="ConfirmPassword"
+                    placeholder="Email"
                     {...field}
                     className="bg-background
                    placeholder:text-black placeholder:opacity-40

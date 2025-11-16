@@ -14,11 +14,11 @@ export default function Headers() {
         <div className="flex gap-2 mr-4 ml-auto items-center">
           <NavBarHeader />
           <button className="p-2 pl-6 pr-6  bg-[#00a8ef] hover:bg-blue-500 text-white text-lg rounded-lg ">
-            <Link href="./login">Login</Link>
+            <Link href="/login">Login</Link>
           </button>
 
           <button className="p-2 pl-4 pr-4  bg-[#00a8ef] hover:bg-blue-500 text-white text-lg rounded-lg">
-            <Link href="./register">Sign in</Link>
+            <Link href="/register">Sign in</Link>
           </button>
         </div>
       </div>

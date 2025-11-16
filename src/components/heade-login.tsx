@@ -1,4 +1,3 @@
-// import { ModeToggle } from "@/components/toggle-theme";
 import NavBarHeader from "@/components/navigation_menu_header";
 import Image from "next/image";
 import Link from "next/link";
@@ -15,7 +14,7 @@ export default function HeaderLogin() {
         </div>
         <div className="flex gap-2 mr-4 ml-auto items-center">
           <NavBarHeader />
-          <Link href={"/"}>
+          <Link href={"/order"}>
             <Image
               src={"/icon-cart.svg"}
               alt="logo-cart"

@@ -1,11 +1,12 @@
 "use client";
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { toast } from "sonner";
 
+import { useRouter } from "next/navigation";
 const formRegister = z.object({
-  username: z.string().min(2),
+  email: z.string().email("Invalid email address"),
   password: z.string().min(6),
 });
 type FormValue = z.infer<typeof formRegister>;
@@ -21,16 +22,59 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 
+const envConfig = {
+  API_URL: process.env.NEXT_PUBLIC_API_URL,
+};
+
 export default function LoginForm() {
+  const router = useRouter();
   const form = useForm<FormValue>({
     resolver: zodResolver(formRegister),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
-  function onsubmit(data: FormValue) {
-    // fetch()
+  async function onsubmit(data: FormValue) {
+    try {
+      const result = await fetch(`http://localhost:8088/api/users/login`, {
+        body: JSON.stringify(data),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      }).then(async (res) => {
+        const payload = await res.text();
+        console.log("Login Response:", payload);
+        if (!res.ok) {
+          throw data;
+        }
+
+        return payload;
+      });
+      toast.error("Đăng nhập thành công");
+      const resultFromNextSever = await fetch("/api/auth", {
+        method: "POST",
+        body: JSON.stringify({ token: result }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }).then(async (res) => {
+        const payload = await res.json();
+
+        if (!res.ok) {
+          throw data;
+        }
+        console.log("payloadNextServer", payload);
+        return payload;
+      });
+      console.log("resultFromNextSever", resultFromNextSever);
+      router.push("/");
+      router.refresh();
+    } catch (error: any) {
+      console.log(error);
+      toast.error("Mật khẩu hoặc email chưa đúng");
+    }
   }
   return (
     <div className="w-full flex justify-center items-center">
@@ -41,10 +85,10 @@ export default function LoginForm() {
         >
           <FormField
             control={form.control}
-            name="username"
+            name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-white">Username</FormLabel>
+                <FormLabel className="text-white">Email</FormLabel>
                 <FormControl>
                   <Input
                     placeholder="Username"
