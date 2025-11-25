@@ -1,5 +1,7 @@
 "use client";
 import { usePathname } from "next/navigation";
+import { getImageUrl } from "@/utils/imageUrl";
+import { getTourDetailPath } from "@/utils/tourRegions";
 
 type TourType = {
   id: number;
@@ -15,6 +17,7 @@ type TourType = {
   rating: number;
   reviewCount: number;
   promotionName: string;
+  tourTypeId?: number;
 };
 
 interface TourCardProps {
@@ -43,27 +46,23 @@ export default function TourCard({ tour }: TourCardProps) {
   const patharray = pathname.split("/");
   console.log("Path array:", patharray);
 
-  const handlerClick = () => {
-    let pathtour: string = "";
-    if (pathname === "/" || patharray[1] != "tourdetail") {
-      pathtour = `/${tour.id}`;
-    } else {
-      pathtour = `${pathname}/${tour.id}`;
-    }
-    console.log("Path tour detail:", pathtour);
-
-    router.push(pathtour);
-    console.log("Tour ID:", pathname);
+  const handleClick = () => {
+    const path = getTourDetailPath(tour.id, tour.tourTypeId);
+    router.push(path);
   };
   return (
     <div
-      onClick={handlerClick}
+      onClick={handleClick}
       className="w-[300px] bg-white rounded-xl overflow-hidden shadow hover:shadow-lg  transition-all duration-300
             hover:scale-[1.01] hover:-translate-y-2  transition p-3 flex flex-col cursor-pointer"
     >
       {/* Image */}
       <div className="relative w-full h-[200px] rounded-lg overflow-hidden">
-        <img src={tour?.imageUrl} alt="tour" className="object-cover" />
+        <img
+          src={`http://localhost:8088/api/tours/images/${tour?.imageUrl}`}
+          alt={tour?.name || "tour"}
+          className="w-full h-full object-cover"
+        />
         <div className="absolute top-2 left-2 bg-red-600 text-white text-sm px-3 py-1 rounded-full flex items-center gap-1">
           <span>⚡</span> Giảm -{tour?.discountPercent}%
         </div>

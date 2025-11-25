@@ -13,12 +13,12 @@ export default function TourIn() {
     fetchTours();
   }, []);
 
-  const showtourin = tours.tours;
-  console.log("Tour trong nuoc:", showtourin);
-
   if (loading) {
-    <Loading />;
+    return <Loading />;
   }
+
+  const showtourin = tours || [];
+  console.log("Tour trong nuoc:", showtourin);
 
   // useEffect(() => {
   //   if (show) {

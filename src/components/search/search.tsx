@@ -10,7 +10,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import Image from "next/image";
 import { useStore } from "@/store/tourStore";
-import { getTours } from "@/app/api/tours/route";
+import { getTours } from "@/api/tourApi";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,7 +71,7 @@ export default function Search() {
 
   // fomat ngay
   let day = String(date?.getDate()).padStart(2, "0");
-  let month = String(date?.getMonth() + 1).padStart(2, "0");
+  let month = String(date?.getMonth + 1).padStart(2, "0");
   let year = String(date?.getFullYear());
   let datefomat = day + "/" + month + "/" + year;
   dataform.startDate = datefomat;

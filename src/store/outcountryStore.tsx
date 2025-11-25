@@ -1,13 +1,14 @@
 // store/counterStore.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { getTours } from "../app/api/tours/route";
+import { getTours, TourListResponse, TourDetailResponse } from "@/api/tourApi";
 
 type TourStore = {
-  tours: any;
+  tours: TourDetailResponse[];
   loading: boolean;
   error: string | null;
   fetchTours: () => Promise<void>;
+  clearTours: () => void;
 };
 
 export const useOutCountryStore = create<TourStore>()(
@@ -22,9 +23,9 @@ export const useOutCountryStore = create<TourStore>()(
         try {
           const res = await getTours(0, 4, 2);
 
-          // const data: TourDetailResponse[] = res.data;
-          set({ tours: res.data, loading: false });
-          console.log("Fetched tours:", res.data);
+          // res.data is TourListResponse, we need to extract the tours array
+          set({ tours: res.data.tours, loading: false });
+          console.log("Fetched out-country tours:", res.data.tours);
         } catch (err) {
           const message =
             err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định";
@@ -35,7 +36,7 @@ export const useOutCountryStore = create<TourStore>()(
       clearTours: () => set({ tours: [] }),
     }),
     {
-      name: "tour-storage", // 🔹 tên key lưu trong localStorage
+      name: "tour-outcountry-storage", // 🔹 tên key lưu trong localStorage
       partialize: (state) => ({ tours: state.tours }), // chỉ lưu phần tours (không lưu loading/error)
     }
   )

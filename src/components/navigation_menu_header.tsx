@@ -1,58 +1,154 @@
 "use client";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu";
 
 import { useRouter } from "next/navigation";
-
+import { useEffect, useState } from "react";
 import Link from "next/link";
-const regions = [
-  { id: 3, value: "bac", label: "Miền Bắc" },
-  { id: 4, value: "trung", label: "Miền Trung" },
-  { id: 5, value: "nam", label: "Miền Nam" },
-  { id: 6, value: "chaua", label: "Châu á" },
-  { id: 7, value: "chauau", label: "Châu âu" },
-  { id: 8, value: "chauuc", label: "Châu úc" },
-];
+import { getTourTypesTree, TourTypeResponse } from "@/api/tourTypeApi";
+import { cn } from "@/lib/utils";
+
 export default function NavBarHeader() {
   const router = useRouter();
+  const [tourTypes, setTourTypes] = useState<TourTypeResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  function HandlerChange(value: string) {
-    const pasthvalue = regions.find((item) => item.id == Number(value));
-    console.log("Selected region:", pasthvalue);
-    router.push(`/tourdetail/${pasthvalue?.value}`);
+  // Fetch tour types khi component mount
+  useEffect(() => {
+    const fetchTourTypes = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getTourTypesTree();
+        console.log("Tour types fetched:", data);
+        setTourTypes(data);
+      } catch (error) {
+        console.error("Error loading tour types:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTourTypes();
+  }, []);
+
+  // Helper function để tạo URL từ tourType
+  const getTourUrl = (tourType: TourTypeResponse): string => {
+    const identifier = tourType.value;
+    return `/tourdetail/${identifier}`;
+  };
+
+  // Render tour type với children thành dropdown menu
+  const renderTourTypeWithChildren = (tourType: TourTypeResponse) => {
+    return (
+      <NavigationMenuItem key={tourType.id}>
+        <NavigationMenuTrigger className="text-base font-medium text-gray-700 bg-transparent hover:bg-transparent data-[state=open]:bg-transparent">
+          {tourType.name}
+        </NavigationMenuTrigger>
+
+        {/* SỬA VỊ TRÍ: Thêm !left-0 và bù trừ -left-4 */}
+        {/* !left-0: Buộc căn lề trái. -left-4: Bù trừ cho padding/margin ngầm. */}
+        <NavigationMenuContent className="!w-[320px] !left-0 -left-4">
+          <ul className="p-2 rounded-lg shadow-lg">
+            {/* Children links */}
+            {tourType.children?.map((child, index) => (
+              <li key={child.id}>
+                <Link
+                  href={getTourUrl(child)}
+                  className={cn(
+                    "block px-4 py-3 text-base rounded-md transition-colors",
+                    "hover:bg-[#4502C7] hover:text-white",
+                    "text-[#4502C7] font-medium",
+                    // Fix: Đảm bảo mục đầu tiên có nền tím và chữ trắng
+                    index === 0 && "bg-[#4502C7] !text-white"
+                  )}
+                >
+                  {child.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </NavigationMenuContent>
+      </NavigationMenuItem>
+    );
+  };
+
+  // Render tour type không có children thành link thông thường
+  const renderTourTypeLink = (tourType: TourTypeResponse) => {
+    return (
+      <NavigationMenuItem key={tourType.id}>
+        <Link href={getTourUrl(tourType)} legacyBehavior passHref>
+          <NavigationMenuLink className="text-base font-medium text-gray-700 hover:text-purple-600 px-4 py-2 rounded-md hover:bg-gray-50 transition-colors inline-flex items-center">
+            {tourType.name}
+          </NavigationMenuLink>
+        </Link>
+      </NavigationMenuItem>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <NavigationMenu>
+        <NavigationMenuList className="gap-2">
+          <NavigationMenuItem>
+            <Link href="/" legacyBehavior passHref>
+              <NavigationMenuLink className="text-base font-medium text-gray-700 px-4 py-2">
+                Trang Chủ
+              </NavigationMenuLink>
+            </Link>
+          </NavigationMenuItem>
+          <NavigationMenuItem>
+            <span className="text-base text-gray-400 px-4">Đang tải...</span>
+          </NavigationMenuItem>
+        </NavigationMenuList>
+      </NavigationMenu>
+    );
   }
+
   return (
-    <div className="flex justify-between items-center gap-[20px] mr-20">
-      <span className="text-lg font-medium hover:text-blue-600">
-        <Link href={"/"}>Trang Chủ</Link>
-      </span>
-      <Select onValueChange={HandlerChange}>
-        <SelectTrigger className="w-[140px] border-none text-lg ">
-          <SelectValue placeholder="Trong nước" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="3">Miền Bắc</SelectItem>
-          <SelectItem value="4">Miền Trung </SelectItem>
-          <SelectItem value="5">Miền Nam</SelectItem>
-        </SelectContent>
-      </Select>
-      <Select onValueChange={HandlerChange}>
-        <SelectTrigger className="w-[140px] border-none text-lg">
-          <SelectValue placeholder="Nước ngoài" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="6">Châu Á</SelectItem>
-          <SelectItem value="7">Châu Âu</SelectItem>
-          <SelectItem value="8">Châu Úc</SelectItem>
-        </SelectContent>
-      </Select>
-      <a className="text-lg hover:text-blue-600 cursor-pointer">Tin tức</a>
-      <a className="text-lg hover:text-blue-600 cursor-pointer">Liên hệ</a>
-    </div>
+    <NavigationMenu>
+      <NavigationMenuList className="gap-1">
+        {/* Trang chủ - giữ nguyên */}
+        <NavigationMenuItem>
+          <Link href="/" legacyBehavior passHref>
+            <NavigationMenuLink className="text-base font-medium text-gray-700 hover:text-purple-600 px-4 py-2 rounded-md hover:bg-gray-50 transition-colors inline-flex items-center">
+              Trang Chủ
+            </NavigationMenuLink>
+          </Link>
+        </NavigationMenuItem>
+
+        {/* Render dynamic tour types từ API */}
+        {tourTypes.map((tourType) => {
+          if (tourType.children && tourType.children.length > 0) {
+            return renderTourTypeWithChildren(tourType);
+          } else {
+            return renderTourTypeLink(tourType);
+          }
+        })}
+
+        {/* Tin tức - giữ nguyên */}
+        <NavigationMenuItem>
+          <Link href="/news" legacyBehavior passHref>
+            <NavigationMenuLink className="text-base font-medium text-gray-700 hover:text-purple-600 px-4 py-2 rounded-md hover:bg-gray-50 transition-colors inline-flex items-center">
+              Tin tức
+            </NavigationMenuLink>
+          </Link>
+        </NavigationMenuItem>
+
+        {/* Liên hệ - giữ nguyên */}
+        <NavigationMenuItem>
+          <Link href="/contact" legacyBehavior passHref>
+            <NavigationMenuLink className="text-base font-medium text-gray-700 hover:text-purple-600 px-4 py-2 rounded-md hover:bg-gray-50 transition-colors inline-flex items-center">
+              Liên hệ
+            </NavigationMenuLink>
+          </Link>
+        </NavigationMenuItem>
+      </NavigationMenuList>
+    </NavigationMenu>
   );
 }

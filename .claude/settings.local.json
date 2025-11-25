@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(dir \"C:\\Users\\DUY THANH\\Documents\\Travel FE\\travelweb\\src\\app\" /B)",
+      "Bash(ls:*)",
+      "Bash(dir \"C:\\Users\\DUY THANH\\Documents\\Travel FE\\travelweb\\public\" /B)",
+      "Bash(xcopy:*)",
+      "Bash(powershell:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout 10 bash:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

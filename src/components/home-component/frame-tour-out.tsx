@@ -12,11 +12,11 @@ export default function TourOut() {
     fetchTours();
   }, []);
 
-  const showtourout = tours.tours;
-  console.log("Tour trong nuoc:", showtourout);
+  // tours is already an array of TourDetailResponse[]
+  console.log("Tour nuoc ngoai:", tours);
 
   if (loading) {
-    <Loading />;
+    return <Loading />;
   }
 
   // const showTour = () => {
@@ -28,7 +28,7 @@ export default function TourOut() {
         Tour Nuớc Ngoài
       </h2>
       <div className="flex gap-5 mt-12 flex-wrap">
-        {showtourout.map((tour: any) => {
+        {tours.map((tour: any) => {
           return <TourCard key={tour.id} tour={tour} />;
         })}
       </div>

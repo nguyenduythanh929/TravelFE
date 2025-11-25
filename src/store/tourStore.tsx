@@ -1,13 +1,14 @@
 // store/counterStore.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { getTours } from "../app/api/tours/route";
+import { getTours, TourListResponse, TourDetailResponse } from "@/api/tourApi";
 
 type TourStore = {
-  tours: any;
+  tours: TourDetailResponse[];
   loading: boolean;
   error: string | null;
   fetchTours: () => Promise<void>;
+  clearTours: () => void;
 };
 
 export const useStore = create<TourStore>()(
@@ -23,9 +24,9 @@ export const useStore = create<TourStore>()(
           const offset = 0;
           const res = await getTours(offset, 10);
 
-          // const data: TourDetailResponse[] = res.data;
-          set({ tours: res.data, loading: false });
-          console.log("Fetched tours:", res.data);
+          // res.data is TourListResponse, we need to extract the tours array
+          set({ tours: res.data.tours, loading: false });
+          console.log("Fetched tours:", res.data.tours);
         } catch (err) {
           const message =
             err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định";

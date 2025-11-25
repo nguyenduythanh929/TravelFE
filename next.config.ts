@@ -1,13 +1,18 @@
 import type { NextConfig } from "next";
 
-const nextConfig = {
-  // ... các cấu hình khác
+const nextConfig: NextConfig = {
   images: {
-    domains: [
-      "www.google.com", // Thêm tên miền bị lỗi vào đây
-      // Nếu hình ảnh thực tế đến từ royalstar.com.vn (theo URL bạn cung cấp),
-      // bạn cũng nên thêm tên miền gốc đó nếu sử dụng trực tiếp:
-      // 'royalstar.com.vn',
+    remotePatterns: [
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "8088",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "**",
+      },
     ],
   },
 };

@@ -44,6 +44,8 @@
 }
 
 :root {
+  --color-primary: #4880ff;
+  --color-text: #202224;
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -119,4 +121,19 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+[data-radix-navigation-menu-viewport] {
+  position: absolute !important;
+  left: 0 !important;
+  top: 100% !important;
+  margin-top: 0 !important;
+}
+
+[data-radix-navigation-menu-content] {
+  position: absolute !important;
+  left: 0 !important;
+  top: 100% !important;
+  margin-top: 0 !important;
+  transform-origin: top left !important;
 }
