@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Editor } from "@tinymce/tinymce-react";
 
 interface TinyEditorProps {
@@ -16,12 +16,74 @@ export default function TinyEditor({
 }: TinyEditorProps) {
   const editorRef = useRef<any>(null);
   const TINYMCE_BASE = "/tinymce";
+  const [isReady, setIsReady] = useState(false);
+  const [editorKey, setEditorKey] = useState(0);
+
+  // ✅ Đợi component mount xong và data sẵn sàng
+  useEffect(() => {
+    let mounted = true;
+
+    const initEditor = async () => {
+      // ✅ Đợi 500ms để đảm bảo:
+      // 1. DOM đã render xong
+      // 2. Data đã được fetch xong
+      // 3. TinyMCE scripts đã load
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      if (mounted) {
+        setIsReady(true);
+        console.log("✅ TinyEditor ready to initialize");
+      }
+    };
+
+    initEditor();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // ✅ Force re-render khi initialValue thay đổi
+  useEffect(() => {
+    if (isReady && initialValue) {
+      console.log("🔄 TinyEditor content updated, re-rendering...");
+      setEditorKey((prev) => prev + 1);
+    }
+  }, [initialValue, isReady]);
+
+  // ✅ Hiển thị loading state
+  if (!isReady) {
+    return (
+      <div
+        style={{
+          height,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          border: "1px solid #ddd",
+          borderRadius: "4px",
+          backgroundColor: "#f9f9f9",
+          color: "#666",
+          fontSize: "14px",
+        }}
+      >
+        Đang tải trình soạn thảo...
+      </div>
+    );
+  }
 
   return (
     <Editor
+      key={editorKey} // ✅ Force re-render với key mới
       apiKey="wcmxywpuerdtkgqp1ytzvprr27s9v62nxc14lbmsu1a1jkg9"
       tinymceScriptSrc={`${TINYMCE_BASE}/tinymce.min.js`}
-      onInit={(_evt, editor) => (editorRef.current = editor)}
+      onInit={(_evt, editor) => {
+        editorRef.current = editor;
+        console.log(
+          "✅ TinyEditor initialized with content length:",
+          initialValue.length
+        );
+      }}
       initialValue={initialValue}
       init={{
         height,
@@ -31,14 +93,12 @@ export default function TinyEditor({
           "undo redo | styles | bold italic | alignleft aligncenter alignright alignjustify | outdent indent | charmap code emoticons image link numlist bullist media",
         branding: false,
         promotion: false,
-        license_key: "gpl", // ✅ Fix: Add GPL license key for open source use
+        license_key: "gpl",
         base_url: TINYMCE_BASE,
         suffix: ".min",
         images_upload_url: "http://localhost:8088/api/tinymce/upload",
-        // File picker types
         file_picker_types: "image",
 
-        // Custom file picker callback (optional)
         file_picker_callback: (callback, value, meta) => {
           if (meta.filetype === "image") {
             const input = document.createElement("input");
@@ -50,7 +110,6 @@ export default function TinyEditor({
               if (file) {
                 const reader = new FileReader();
                 reader.onload = function (e) {
-                  // Upload file to server
                   const formData = new FormData();
                   formData.append("file", file);
 
@@ -60,7 +119,6 @@ export default function TinyEditor({
                   })
                     .then((response) => response.json())
                     .then((data) => {
-                      // Call the callback with the uploaded image URL
                       callback(data.location, {
                         alt: file.name,
                         title: file.name,
@@ -79,7 +137,6 @@ export default function TinyEditor({
           }
         },
 
-        // Image upload handler (for paste/drop)
         images_upload_handler: async (blobInfo, progress) => {
           return new Promise((resolve, reject) => {
             const formData = new FormData();

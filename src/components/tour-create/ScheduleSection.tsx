@@ -13,18 +13,63 @@ export default function ScheduleSection({
   schedules,
   onSchedulesChange,
 }: ScheduleSectionProps) {
+  // ✅ States
   const [localSchedules, setLocalSchedules] =
     useState<ScheduleItemType[]>(schedules);
-  const lastSyncedIdsRef = useRef<string>(
-    schedules
-      .map((s) => s.id)
-      .sort()
-      .join(",")
-  );
-  // Track if the change was internal (user action) to avoid syncing prop changes back
-  const isInternalChange = useRef(false);
+  const [componentKey, setComponentKey] = useState(0); // Key để force re-render
+  const [isReady, setIsReady] = useState(false); // Loading state
 
-  // Sync localSchedules to parent when changed by user actions
+  // ✅ Refs
+  const isInternalChange = useRef(false);
+  const tinymceRef = useRef<any>(null);
+  const sortableRef = useRef<any>(null);
+  const prevScheduleIdsRef = useRef<string>(""); // Track IDs để tránh re-render không cần thiết
+
+  // ✅ Effect 1: Initial delay trước khi init
+  useEffect(() => {
+    let mounted = true;
+
+    const initDelay = async () => {
+      // Đợi 800ms để DOM và data sẵn sàng
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      if (mounted) {
+        setIsReady(true);
+        console.log("✅ ScheduleSection ready to initialize");
+      }
+    };
+
+    initDelay();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // ✅ Effect 2: Sync schedules from props - CHỈ FORCE RE-RENDER KHI STRUCTURE THAY ĐỔI
+  useEffect(() => {
+    if (schedules.length === 0 || !isReady) return;
+
+    // So sánh IDs (KHÔNG sort để phát hiện cả reorder)
+    const currentIds = schedules.map((s) => s.id).join(",");
+    const prevIds = prevScheduleIdsRef.current;
+
+    if (currentIds !== prevIds) {
+      // Structure thay đổi (thêm/xóa/reorder) → Force re-render
+      console.log(
+        "🔄 Schedule structure changed (IDs changed), forcing re-render..."
+      );
+      prevScheduleIdsRef.current = currentIds;
+      setLocalSchedules(schedules);
+      setComponentKey((prev) => prev + 1);
+    } else {
+      // Structure giống nhau, chỉ content thay đổi → KHÔNG force re-render
+      console.log("📝 Only content changed, updating without re-render");
+      setLocalSchedules(schedules);
+    }
+  }, [schedules, isReady]);
+
+  // ✅ Effect 3: Sync changes to parent
   useEffect(() => {
     if (isInternalChange.current) {
       isInternalChange.current = false;
@@ -32,270 +77,278 @@ export default function ScheduleSection({
     }
   }, [localSchedules, onSchedulesChange]);
 
-  // Sync localSchedules with prop when schedule structure changes (IDs change, not content)
+  // ✅ Effect 4: Init TinyMCE - chạy mỗi khi componentKey thay đổi
   useEffect(() => {
-    const currentIds = schedules
-      .map((s) => s.id)
-      .sort()
-      .join(",");
-    const lastSyncedIds = lastSyncedIdsRef.current;
+    if (!isReady) return;
 
-    // Only sync if the IDs are different (new items added/removed from parent)
-    // This prevents overwriting user input when they're typing
-    if (currentIds !== lastSyncedIds) {
-      lastSyncedIdsRef.current = currentIds;
-      setLocalSchedules(schedules);
-    }
-  }, [schedules]);
+    let mounted = true;
 
-  useEffect(() => {
-    let tinymce: any = null;
-    let sortableInstance: any = null;
+    const initTinyMCE = async () => {
+      if (typeof window === "undefined" || !mounted) return;
 
-    // Dynamically import libraries
-    const initLibraries = async () => {
-      if (typeof window !== "undefined") {
-        try {
-          const Sortable = (await import("sortablejs")).default;
-          tinymce = (await import("tinymce/tinymce")).default;
+      try {
+        // Import TinyMCE
+        const tinymce = (await import("tinymce/tinymce")).default;
+        tinymceRef.current = tinymce;
 
-          // Import TinyMCE dependencies
-          // @ts-expect-error
-          await import("tinymce/icons/default");
-          // @ts-expect-error
-          await import("tinymce/themes/silver");
-          // @ts-expect-error
-          await import("tinymce/models/dom");
+        // Import dependencies
+        // @ts-expect-error
+        await import("tinymce/icons/default");
+        // @ts-expect-error
+        await import("tinymce/themes/silver");
+        // @ts-expect-error
+        await import("tinymce/models/dom");
 
-          // Import plugins
-          const plugins = [
-            "charmap",
-            "image",
-            "link",
-            "media",
-            "lists",
-            "code",
-          ];
-          for (const plugin of plugins) {
-            try {
-              await import(`tinymce/plugins/${plugin}`);
-            } catch (err) {
-              console.warn(`Plugin ${plugin} not found, skipping...`);
-            }
+        // Import plugins
+        const plugins = ["charmap", "image", "link", "media", "lists", "code"];
+        for (const plugin of plugins) {
+          try {
+            await import(`tinymce/plugins/${plugin}`);
+          } catch (err) {
+            console.warn(`Plugin ${plugin} not found`);
+          }
+        }
+
+        // Đợi thêm 300ms để đảm bảo DOM đã render
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
+        if (!mounted) return;
+
+        console.log(
+          "🚀 Initializing TinyMCE for",
+          localSchedules.length,
+          "schedules"
+        );
+
+        // Init TinyMCE cho tất cả schedules
+        for (const schedule of localSchedules) {
+          if (!mounted) break;
+
+          const selector = `#schedule-content-${schedule.id}`;
+          const element = document.querySelector(selector);
+
+          if (!element) {
+            console.warn(`❌ Element not found: ${selector}`);
+            continue;
           }
 
-          // Wait for DOM and imports to be ready
-          await new Promise((resolve) => setTimeout(resolve, 200));
+          // Remove existing editor if any
+          const existingEditor = tinymce.get(`schedule-content-${schedule.id}`);
+          if (existingEditor) {
+            existingEditor.remove();
+          }
 
-          // Initialize TinyMCE for existing textareas
-          const currentSchedules = localSchedules;
-          for (const schedule of currentSchedules) {
-            const selector = `#schedule-content-${schedule.id}`;
-            const element = document.querySelector(selector);
+          // Init new editor
+          await tinymce.init({
+            selector,
+            plugins: "charmap image link media lists code",
+            toolbar:
+              "undo redo | styles | bold italic | alignleft aligncenter alignright alignjustify | outdent indent | charmap code emoticons image link numlist bullist media",
 
-            if (element) {
-              // Remove existing editor if any
-              const existingEditor = tinymce.get(
-                `schedule-content-${schedule.id}`
-              );
-              if (existingEditor) {
-                existingEditor.remove();
-              }
+            menubar: false,
+            branding: false,
+            height: 300,
+            license_key: "gpl",
+            skin: false,
+            content_css: false,
+            promotion: false,
 
-              await tinymce.init({
-                selector,
-                plugins: "charmap image link media lists code",
-                toolbar:
-                  "undo redo | styles | bold italic | alignleft aligncenter alignright alignjustify | outdent indent | charmap code emoticons image link numlist bullist media",
-                menubar: false,
-                branding: false,
-                height: 300,
-                license_key: "gpl",
+            images_upload_url: "http://localhost:8088/api/tinymce/upload",
+            file_picker_types: "image",
 
-                // Critical settings to prevent loading external resources
-                skin: false,
-                content_css: false,
-                promotion: false,
+            // ⭐⭐⭐ Cho phép browse ảnh từ máy lên
+            file_picker_callback: (callback, value, meta) => {
+              if (meta.filetype === "image") {
+                const input = document.createElement("input");
+                input.setAttribute("type", "file");
+                input.setAttribute("accept", "image/*");
 
-                // Inline styles
-                content_style: `
-                  body {font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-                    font-size: 14px;
-                    padding: 10px;
-                    line-height: 1.5;
+                input.onchange = function () {
+                  const file = (input as HTMLInputElement).files?.[0];
+
+                  if (file) {
+                    const formData = new FormData();
+                    formData.append("file", file);
+
+                    fetch("http://localhost:8088/api/tinymce/upload", {
+                      method: "POST",
+                      body: formData,
+                    })
+                      .then((response) => response.json())
+                      .then((data) => {
+                        callback(data.location, {
+                          alt: file.name,
+                          title: file.name,
+                        });
+                      })
+                      .catch((error) => {
+                        console.error("Error uploading image:", error);
+                        alert("Failed to upload image");
+                      });
                   }
-                  p { margin: 0 0 10px 0; }
-                `,
+                };
 
-                setup: (editor: any) => {
-                  editor.on("change keyup", () => {
-                    // Use functional update to get latest state
-                    isInternalChange.current = true;
-                    setLocalSchedules((prev) =>
-                      prev.map((s) =>
-                        s.id === schedule.id
-                          ? { ...s, content: editor.getContent() }
-                          : s
-                      )
-                    );
+                input.click();
+              }
+            },
+
+            // ⭐⭐⭐ Cho phép drag & drop hoặc paste ảnh
+            images_upload_handler: async (blobInfo, progress) => {
+              return new Promise((resolve, reject) => {
+                const formData = new FormData();
+                formData.append("file", blobInfo.blob(), blobInfo.filename());
+
+                fetch("http://localhost:8088/api/tinymce/upload", {
+                  method: "POST",
+                  body: formData,
+                })
+                  .then((response) => response.json())
+                  .then((data) => resolve(data.location))
+                  .catch((error) => {
+                    console.error("Error uploading image:", error);
+                    reject("Image upload failed: " + error.message);
                   });
-                },
               });
-            }
+            },
+
+            automatic_uploads: true,
+
+            content_style: `
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
+      font-size: 14px;
+      padding: 10px;
+      line-height: 1.5;
+    }
+    p { margin: 0 0 10px 0; }
+  `,
+
+            setup: (editor) => {
+              editor.on("change keyup", () => {
+                isInternalChange.current = true;
+                setLocalSchedules((prev) =>
+                  prev.map((s) =>
+                    s.id === schedule.id
+                      ? { ...s, content: editor.getContent() }
+                      : s
+                  )
+                );
+              });
+            },
+          });
+
+          console.log(`✅ TinyMCE initialized for ${schedule.id}`);
+        }
+
+        console.log("✅ All TinyMCE editors initialized");
+
+        // Init Sortable
+        const scheduleList = document.querySelector(".inner-schedule-list");
+        if (scheduleList && mounted) {
+          const Sortable = (await import("sortablejs")).default;
+
+          if (sortableRef.current) {
+            sortableRef.current.destroy();
           }
 
-          // Initialize Sortable
-          const scheduleList = document.querySelector(".inner-schedule-list");
-          if (scheduleList) {
-            // Destroy existing Sortable instance if any
-            if (sortableInstance) {
-              sortableInstance.destroy();
-            }
-
-            sortableInstance = new Sortable(scheduleList as HTMLElement, {
-              handle: ".inner-move",
-              animation: 150,
-              onStart: async (evt) => {
-                const itemId = evt.item.getAttribute("data-schedule-id");
-                if (itemId && tinymce) {
-                  const editor = tinymce.get(`schedule-content-${itemId}`);
+          sortableRef.current = new Sortable(scheduleList as HTMLElement, {
+            handle: ".inner-move",
+            animation: 150,
+            onStart: (evt) => {
+              const itemId = evt.item.getAttribute("data-schedule-id");
+              if (itemId && tinymceRef.current) {
+                try {
+                  const editor = tinymceRef.current.get(
+                    `schedule-content-${itemId}`
+                  );
                   if (editor) {
-                    // Save content before removing editor
                     const content = editor.getContent();
                     isInternalChange.current = true;
                     setLocalSchedules((prev) =>
-                      prev.map((s) =>
-                        s.id === itemId ? { ...s, content } : s
-                      )
+                      prev.map((s) => (s.id === itemId ? { ...s, content } : s))
                     );
                     editor.remove();
                   }
+                } catch (err) {
+                  console.warn("Failed to remove editor on drag start:", err);
                 }
-              },
-              onEnd: async (evt) => {
-                // Get current state to preserve all data
-                let reorderedSchedules: ScheduleItemType[] = [];
+              }
+            },
+            onEnd: async () => {
+              // Get new order from DOM
+              const scheduleList = document.querySelector(
+                ".inner-schedule-list"
+              );
+              if (!scheduleList) return;
 
-                isInternalChange.current = true;
-                setLocalSchedules((prev) => {
-                  const scheduleList = document.querySelector(
-                    ".inner-schedule-list"
-                  );
-                  if (!scheduleList) return prev;
+              const newOrder = Array.from(scheduleList.children).map((child) =>
+                child.getAttribute("data-schedule-id")
+              );
 
-                  // Get new order from DOM
-                  const newOrder = Array.from(scheduleList.children).map(
-                    (child) => child.getAttribute("data-schedule-id")
-                  );
+              // Reorder schedules
+              isInternalChange.current = true;
+              setLocalSchedules((prev) => {
+                const scheduleMap = new Map(prev.map((s) => [s.id, s]));
+                return newOrder
+                  .map((id) => scheduleMap.get(id!))
+                  .filter((s): s is ScheduleItemType => s !== undefined);
+              });
 
-                  // Create a map of current schedules for quick lookup
-                  const scheduleMap = new Map(prev.map((s) => [s.id, s]));
+              // Force re-init
+              setComponentKey((prev) => prev + 1);
+            },
+          });
 
-                  // Reorder schedules preserving all data
-                  reorderedSchedules = newOrder
-                    .map((id) => scheduleMap.get(id!))
-                    .filter((s): s is ScheduleItemType => s !== undefined);
-
-                  return reorderedSchedules;
-                });
-
-                // Reinitialize TinyMCE for all items after reorder
-                setTimeout(async () => {
-                  if (tinymce && reorderedSchedules.length > 0) {
-                    for (const schedule of reorderedSchedules) {
-                      const selector = `#schedule-content-${schedule.id}`;
-                      const element = document.querySelector(selector);
-
-                      if (element) {
-                        // Remove existing editor if any
-                        const existingEditor = tinymce.get(
-                          `schedule-content-${schedule.id}`
-                        );
-                        if (existingEditor) {
-                          existingEditor.remove();
-                        }
-
-                        await tinymce.init({
-                          selector,
-                          plugins: "charmap image link media lists code",
-                          toolbar:
-                            "undo redo | styles | bold italic | alignleft aligncenter alignright alignjustify | outdent indent | charmap code emoticons image link numlist bullist media",
-                          menubar: false,
-                          branding: false,
-                          height: 300,
-                          license_key: "gpl",
-                          skin: false,
-                          content_css: false,
-                          promotion: false,
-                          content_style: `
-                            body {
-                              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-                              font-size: 14px;
-                              padding: 10px;
-                              line-height: 1.5;
-                            }
-                            p { margin: 0 0 10px 0; }
-                          `,
-                          setup: (editor: any) => {
-                            editor.on("change keyup", () => {
-                              isInternalChange.current = true;
-                              setLocalSchedules((current) =>
-                                current.map((s) =>
-                                  s.id === schedule.id
-                                    ? { ...s, content: editor.getContent() }
-                                    : s
-                                )
-                              );
-                            });
-                          },
-                        });
-                      }
-                    }
-                  }
-                }, 100);
-              },
-            });
-          }
-        } catch (error) {
-          console.error("Error initializing libraries:", error);
+          console.log("✅ Sortable initialized");
         }
+      } catch (error) {
+        console.error("❌ Error initializing:", error);
       }
     };
 
-    initLibraries();
+    initTinyMCE();
 
     // Cleanup
     return () => {
-      if (typeof window !== "undefined") {
-        import("tinymce/tinymce").then(({ default: tinymce }) => {
-          localSchedules.forEach((schedule) => {
-            const editor = tinymce.get(`schedule-content-${schedule.id}`);
+      mounted = false;
+
+      // Cleanup TinyMCE
+      if (tinymceRef.current) {
+        localSchedules.forEach((schedule) => {
+          try {
+            const editor = tinymceRef.current.get(
+              `schedule-content-${schedule.id}`
+            );
             if (editor) {
               editor.remove();
             }
-          });
+          } catch (err) {
+            // Editor already removed, ignore
+          }
         });
       }
-      if (sortableInstance) {
-        sortableInstance.destroy();
+
+      // Cleanup Sortable - Check if element still exists
+      if (sortableRef.current) {
+        try {
+          const sortableEl = sortableRef.current.el;
+          if (sortableEl && document.contains(sortableEl)) {
+            sortableRef.current.destroy();
+          }
+        } catch (err) {
+          // Sortable already destroyed or element removed, ignore
+        }
+        sortableRef.current = null;
       }
     };
-  }, [localSchedules.length]);
+  }, [componentKey, isReady]);
 
+  // ✅ Event Handlers
   const handleTitleChange = (id: string, title: string) => {
     isInternalChange.current = true;
     setLocalSchedules((prev) =>
       prev.map((schedule) =>
         schedule.id === id ? { ...schedule, title } : schedule
-      )
-    );
-  };
-
-  const handleContentChange = (id: string, content: string) => {
-    isInternalChange.current = true;
-    setLocalSchedules((prev) =>
-      prev.map((schedule) =>
-        schedule.id === id ? { ...schedule, content } : schedule
       )
     );
   };
@@ -310,86 +363,34 @@ export default function ScheduleSection({
     isInternalChange.current = true;
     setLocalSchedules((prev) => [...prev, newSchedule]);
 
-    // Initialize TinyMCE for new item
-    setTimeout(async () => {
-      if (typeof window !== "undefined") {
-        try {
-          const tinymce = (await import("tinymce/tinymce")).default;
-
-          // Wait for DOM update
-          await new Promise((resolve) => setTimeout(resolve, 100));
-
-          const selector = `#schedule-content-${newSchedule.id}`;
-          const element = document.querySelector(selector);
-
-          if (element) {
-            tinymce.init({
-              selector,
-              plugins: "charmap image link media lists code",
-              toolbar:
-                "undo redo | styles | bold italic | alignleft aligncenter alignright alignjustify | outdent indent | charmap code emoticons image link numlist bullist media",
-              menubar: false,
-              branding: false,
-              height: 300,
-              license_key: "gpl",
-
-              // Critical settings to prevent loading external resources
-              skin: false,
-              content_css: false,
-              promotion: false,
-
-              // Inline styles
-              content_style: `
-                body {
-                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-                  font-size: 14px;
-                  padding: 10px;
-                  line-height: 1.5;
-                }
-                p { margin: 0 0 10px 0; }
-              `,
-
-              setup: (editor: any) => {
-                editor.on("change keyup", () => {
-                  isInternalChange.current = true;
-                  setLocalSchedules((prev) =>
-                    prev.map((s) =>
-                      s.id === newSchedule.id
-                        ? { ...s, content: editor.getContent() }
-                        : s
-                    )
-                  );
-                });
-              },
-            });
-          }
-        } catch (error) {
-          console.error("Error initializing TinyMCE for new schedule:", error);
-        }
-      }
-    }, 200);
+    // Force re-render ngay lập tức
+    setComponentKey((prev) => prev + 1);
   };
 
-  const handleRemoveSchedule = async (id: string) => {
-    setLocalSchedules((prev) => {
-      if (prev.length <= 1) {
-        alert("Phải có ít nhất 1 lịch trình!");
-        return prev;
-      }
+  const handleRemoveSchedule = (id: string) => {
+    if (localSchedules.length <= 1) {
+      alert("Phải có ít nhất 1 lịch trình!");
+      return;
+    }
 
-      // Remove TinyMCE editor
-      if (typeof window !== "undefined") {
-        import("tinymce/tinymce").then(({ default: tinymce }) => {
-          const editor = tinymce.get(`schedule-content-${id}`);
-          if (editor) {
-            editor.remove();
-          }
-        });
+    // Remove editor trước
+    if (tinymceRef.current) {
+      try {
+        const editor = tinymceRef.current.get(`schedule-content-${id}`);
+        if (editor) {
+          editor.remove();
+        }
+      } catch (err) {
+        // Editor already removed, ignore
       }
+    }
 
-      isInternalChange.current = true;
-      return prev.filter((schedule) => schedule.id !== id);
-    });
+    // Update state
+    isInternalChange.current = true;
+    setLocalSchedules((prev) => prev.filter((schedule) => schedule.id !== id));
+
+    // Force re-render ngay lập tức
+    setComponentKey((prev) => prev + 1);
   };
 
   const handleToggleSchedule = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -406,8 +407,28 @@ export default function ScheduleSection({
     icon?.classList.toggle("rotated");
   };
 
+  // ✅ Loading UI
+  if (!isReady) {
+    return (
+      <div
+        style={{
+          padding: "40px 20px",
+          textAlign: "center",
+          border: "1px solid #ddd",
+          borderRadius: "4px",
+          backgroundColor: "#f9f9f9",
+          color: "#666",
+          fontSize: "14px",
+        }}
+      >
+        Đang tải lịch trình tour...
+      </div>
+    );
+  }
+
+  // ✅ Main Render
   return (
-    <div className="inner-schedule">
+    <div className="inner-schedule" key={componentKey}>
       <div className="inner-schedule-list" onClick={handleToggleSchedule}>
         {localSchedules.map((schedule) => (
           <div

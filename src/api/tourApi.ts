@@ -54,7 +54,35 @@ export interface TourListResponse {
   totalItems: number;
   page: number;
   limit: number;
-  tours: TourDetailResponse[];
+  tours: TourResponse[];
+}
+
+export interface TourResponse {
+  id: number;
+  name: string;
+  imageUrl: string;
+  originalPrice: number;
+  discountedPrice: number;
+  discountPercent: number;
+  isOnSale: boolean;
+  startDate: [number, number, number];
+  duration: number;
+  remainSlot: number;
+  rating: number;
+  reviewCount: number;
+  promotionName: string;
+  tourDetail: string;
+  priceAdult: number;
+  priceChild: number;
+  priceInfant: number;
+  remainAdult: number;
+  remainChild: number;
+  remainInfant: number;
+  status: number;
+  createdBy: string;
+  updatedBy: string;
+  createdAt: [number, number, number, number, number, number] | string;
+  updatedAt: [number, number, number, number, number, number] | string;
 }
 
 export interface LocationResponse {
@@ -121,6 +149,32 @@ export interface TourTypeResponse {
 export interface TourAdminInitResponse {
   locations: LocationResponse[];
   tourTypes: TourTypeResponse[];
+}
+
+export interface TourAdminResponse {
+  id: number;
+  name: string;
+  tourTypes: TourTypeResponse[];
+  avatar: string;
+  images: string[];
+  priceAdult: number;
+  priceChild: number;
+  priceInfant: number;
+  remainAdult: number;
+  remainChild: number;
+  remainInfant: number;
+  locations: LocationResponse[];
+  duration: number;
+  transport: string;
+  status: number;
+  departureDate: [number, number, number];
+  tourDetail: string;
+  schedules: TourScheduleResponse[];
+  discount: number;
+  discountType: string;
+  promotionId: number;
+  createdBy: string;
+  updatedBy: string;
 }
 
 export interface TourScheduleRequest {
@@ -204,12 +258,24 @@ export const getTourInitData = async () => {
   return api.get<TourAdminInitResponse>("/tours/admin");
 };
 
+export const getTourAdminData = async (id: number) => {
+  return api.get<TourAdminResponse>(`/tours/admin/${id}`);
+};
+
 /**
  * Tạo tour mới (Admin)
  */
 export const createTour = async (data: TourAdminRequest) => {
   console.log("🚀 Calling createTour API:", data);
   return api.post<number>("/tours/create", data);
+};
+
+/**
+ * Cập nhật tour (Admin)
+ */
+export const updateTour = async (id: number, data: TourAdminRequest) => {
+  console.log("🚀 Calling updateTour API:", id, data);
+  return api.put<string>(`/tours/${id}`, data);
 };
 
 /**

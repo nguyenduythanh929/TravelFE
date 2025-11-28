@@ -1,10 +1,15 @@
 // store/counterStore.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { getTours, TourListResponse, TourDetailResponse } from "@/api/tourApi";
+import {
+  getTours,
+  TourListResponse,
+  TourDetailResponse,
+  TourResponse,
+} from "@/api/tourApi";
 
 type TourStore = {
-  tours: TourDetailResponse[];
+  tours: TourResponse[];
   loading: boolean;
   error: string | null;
   fetchTours: () => Promise<void>;

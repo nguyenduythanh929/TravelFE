@@ -12,7 +12,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="admin-container">
+    <>
       {/* HEADER */}
       <header className="header">
         <div className="inner-logo">
@@ -58,7 +58,7 @@ export default function AdminLayout({
             </Link>
           </li>
           <li>
-            <Link href="/admin/tours">
+            <Link href="/tours">
               <i className="fa-solid fa-table-list"></i> Quản lý tour
             </Link>
           </li>
@@ -99,9 +99,8 @@ export default function AdminLayout({
           </li>
         </ul>
       </nav>
-      <div className="sider-overlay"> </div>
       {/* CONTENT */}
-      <main className="admin-content">{children}</main>
-    </div>
+      <main className="main">{children}</main>
+    </>
   );
 }
