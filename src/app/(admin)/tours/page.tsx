@@ -62,7 +62,9 @@ export default function ToursPage() {
         null,
         searchTerm,
         priceFrom,
-        priceTo
+        priceTo,
+        undefined,
+        1 // status = 1 (active tours only)
       );
 
       setTours(response.data.tours);

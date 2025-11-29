@@ -125,6 +125,7 @@ export interface TourFilterParams {
   priceFrom?: number;
   priceTo?: number;
   startDate?: string;
+  status?: number;
 }
 
 // ============== ADMIN TYPES ==============
@@ -217,7 +218,8 @@ export const getTours = async (
   name: string = "",
   priceFrom?: number,
   priceTo?: number,
-  startDate?: string
+  startDate?: string,
+  status?: number
 ) => {
   console.log("Calling getTours API:", {
     offset,
@@ -227,6 +229,7 @@ export const getTours = async (
     priceFrom,
     priceTo,
     startDate,
+    status,
   });
 
   return api.get<TourListResponse>("/tours", {
@@ -238,6 +241,7 @@ export const getTours = async (
       priceFrom,
       priceTo,
       startDate,
+      status: status !== undefined ? status : undefined,
     },
   });
 };
@@ -279,11 +283,27 @@ export const updateTour = async (id: number, data: TourAdminRequest) => {
 };
 
 /**
- * Xóa tour (Admin)
+ * Xóa tour (Admin) - Soft delete (status = 0)
  */
 export const deleteTour = async (id: number) => {
   console.log("🚀 Calling deleteTour API:", id);
   return api.delete<string>(`/tours/${id}`);
+};
+
+/**
+ * Khôi phục tour từ thùng rác (Admin) - Restore (status = 1)
+ */
+export const restoreTour = async (id: number) => {
+  console.log("🚀 Calling restoreTour API:", id);
+  return api.patch<string>(`/tours/${id}/restore`);
+};
+
+/**
+ * Xóa vĩnh viễn tour (Admin) - Permanent delete
+ */
+export const permanentDeleteTour = async (id: number) => {
+  console.log("🚀 Calling permanentDeleteTour API:", id);
+  return api.delete<string>(`/tours/${id}/permanent`);
 };
 
 /**
